@@ -1,0 +1,26 @@
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+<h1>Here are all your users in the database</h1>
+
+<table>
+    <tr>
+        <th>Worker ID</td>
+        <th>Trials</th>
+        <th>Events</th>
+        <th>Questions</th>
+        <th>Bonus</th>
+        <th>Began HIT</th>
+        <th>Ended HIT</th>
+    </tr>
+{% for person in participants: %}
+    <tr>
+        <td>{{ person.workerid }}</td>
+        <td style="width: 100px; text-align: center;"><a href="/get_data?id={{person.workerid}}&dataType=trialdata"class="material-icons" style="text-decoration: none; color: black;" download>get_app</a></td>
+        <td style="width: 100px; text-align: center;"><a href="/get_data?id={{person.workerid}}&dataType=eventdata"class="material-icons" style="text-decoration: none; color: black;" download>get_app</a></td>
+        <td style="width: 100px; text-align: center;"><a href="/get_data?id={{person.workerid}}&dataType=questiondata"class="material-icons" style="text-decoration: none; color: black;" download>get_app</a></td>
+        <td style="width: 50px; text-align: center;">{{ "%0.2f"|format(person.bonus|float) }}</td>
+        <td style="padding-right: 15px;">{{ person.beginhit }}</td>
+        <td>{{ person.endhit }}</td>
+    </tr>
+{% endfor %}
+</table>

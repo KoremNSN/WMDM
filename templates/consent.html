@@ -1,0 +1,134 @@
+
+<!doctype html>
+<!-- 
+  The consent.html displays the text of your IRB-approved
+  consent form.  Even if you are not required to provide
+  a consent form, it is helpful to use this form to 
+  describe what people can do if an error comes up, etc...
+-->
+<html>
+    <head>
+        <title>Yale Neuroscience WMDM experiment</title>
+        <link rel=stylesheet href="/static/css/bootstrap.min.css" type="text/css">
+        <link rel=stylesheet href="/static/css/style.css" type="text/css">
+        <script type="text/javascript">
+            function onexit() {
+              self.close(); // no harm, no foul here
+            }
+        </script>
+    </head>
+    <body style="background-color:gray;">
+        <div id="container-consent">
+            <div id="consent">
+                <center><h1>CONSENT FOR PARTICIPATION IN A RESEARCH PROJECT</br>YALE UNIVERSITY SCHOOL OF MEDICINE – YALE-NEW HAVEN HOSPITAL</h1></center>
+                <hr>
+                <div class="legal well">
+                    <p>
+                        <b>Study Title:</b> Neural correlates of decision-making processes – behavior – adult online</br>
+                        <b>Principal Investigator:</b> Ifat Levy, PhD</br>
+                        <b>HIC #:</b> 0910005795</br>
+                        <b>Funding Source:</b><I> NIH and Departmental</I></br>
+                    </p>
+                    <h2>Invitation to Participate and Description of Project</h2>
+                    <p>
+                        You are invited to participate in a research study by Yale University, designed to examine how we make decisions.
+                    </p>
+                    <p>
+                        In order to decide whether you wish to be a part of this research study, you should know enough
+                        about its risks and benefits to make an informed judgment. This consent form gives you detailed
+                        information about the research study, which should go over all aspects of this research: its purpose,
+                        the procedures that will be performed, any risks of the procedures, and possible benefits. Once you
+                        understand the study, you will be asked if you wish to participate; if so, you will be asked to sign
+                        this form.
+                        
+                    </p>
+                    <h2>Description of Procedures</h2>
+                    <p>
+                        If you agree to participate, you will first complete a computer task in which you will be asked
+                        to remember the location of visual stimuli and make a series of choices between pairs of lotteries
+                        to win points.
+
+                    </p>
+                    <p>
+                        Next, you will be asked to provide some basic information about yourself, such as your age and
+                        race. You will have the option to decline to answer these questions.                        
+                    </p>
+                    <p>
+                        The study will take about an hour to complete.
+                    </p>
+                    <h2>Risks and Inconveniences</h2>
+                    <p>
+                        There are no known risks associated with subjects’ participation in this study beyond those
+                        associated with working at a computer terminal for a period of about one hour. You will be
+                        able to take short breaks from time to time if needed.
+                    </p>
+                    <h2>Benefits</h2>
+                    <p>
+                        There will be no direct benefits to you for participating in this study. However, the results may
+                        benefit others by contributing to our understanding of how decision-making processes are
+                        implemented.
+                    </p>
+                    <h2>Economic Considerations</h2>
+                    <p>
+                        There will be no cost to you associated with participation in this study. For your participation,
+                        you will receive $10.00 through Amazon Mechanical Turk.
+                    </p>
+                    <h2>Confidentiality</h2>
+                    <p>
+                        The online survey will be anonymous; no identifiable information will be obtained.
+                    </p>
+                    <h2>Voluntary Participation and Withdrawal</h2>
+                    <p>
+                        Participating in this study is voluntary. You are free to choose not to take part in this study.
+                        Refusing to participate will involve no penalty or loss of benefits to which you are otherwise
+                        entitled (such as your health care outside the study, the payment for your health care, and your
+                        health care benefits). However, you will not be able to enroll in this research study and will not
+                        receive study procedures as a study participant if you do not allow use of your information as part
+                        of this study. Consider this research and the consent form carefully – for as long as you feel is
+                        necessary – before you decide.
+                    </p>
+                    <h2>Authorization</h2>
+                    <p>
+                        <i>I have read (or someone has read to me) this form and have decided to participate
+                             in the project described above. Its general purposes, 
+                             the particulars of involvement and possible hazards and 
+                             inconveniences have been explained to my satisfaction.</i>
+                    </p>
+
+                    <button type="button" class="btn btn-default btn-sm" onClick="window.print();">
+                    <span class="glyphicon glyphicon-print"></span> Print a copy of this
+                    </button>
+                </div>
+
+                <hr>
+                <h4>Do you understand and consent to these terms?</h4>
+                <br>
+
+                <center>
+                    <button type="button" class="btn btn-primary btn-lg" onClick="window.location='/exp?hitId={{ hitid }}&assignmentId={{ assignmentid }}&workerId={{ workerid }}'">
+                    <span class="glyphicon glyphicon-ok"></span> I agree 
+                    </button>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                    <button type="button" class="btn btn-danger btn-lg" onClick="onexit()">
+                    <span class="glyphicon glyphicon-ban-circle"></span> No thanks, I do not want to do this HIT
+                    </button>
+                </center>
+
+                <p>
+                    If you have further questions about this project, 
+                    or if you have a research-related problem, 
+                    you may contact the Yale Decision Neuroscience Lab at (203) 737-2779 or decision@yale.edu.
+                </p>
+                <p>
+                    If you would like to talk with someone other than the researchers to discuss problems, 
+                    concerns, and questions you may have concerning this research, 
+                    or to discuss your rights as a research subject, 
+                    you may contact the Yale Human Investigation Committee at (203) 785-4688.
+                </p>
+
+            </div>
+        </div>
+    </body>
+</html>

@@ -1,0 +1,1075 @@
+<!doctype html>
+<html>
+    
+    <head>
+        <title>Yale Neuroscience WMDM experiment</title>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+        <meta content="utf-8" http-equiv="encoding">
+
+        <script src="/static/lib/jquery-min.js" type="text/javascript"></script>
+        <script src="/static/lib/underscore-min.js" type="text/javascript"></script>
+        <script src="/static/lib/backbone-min.js" type="text/javascript"></script>
+        
+        <script src="/static/js/jspsych/jspsych.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-html-keyboard-response.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-image-keyboard-response.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-html-form.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-text.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-multi-choice.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-survey-likert.js" type="text/javascript"></script>
+        <script src="/static/js/jspsych/plugins/jspsych-call-function.js" type="text/javascript"></script>
+        
+        <script type="text/javascript">
+            // These fields provided by the psiTurk Server
+            var uniqueId = "{{ uniqueId }}"; // a unique string identifying the worker/task
+            var adServerLoc = "{{ adServerLoc }}"; // the location of your ad (so you can send user back at end of experiment)
+            var mode = "{{ mode }}"; // is this running live, sandbox, or in debug mode?
+        </script>
+        
+        <!-- utils.js and psiturk.js provide the basic psiturk functionality -->
+        <script src="/static/js/utils.js" type="text/javascript"></script>
+        <script src="/static/js/psiturk.js" type="text/javascript"></script>
+        
+        <link href="/static/css/jspsych.css" rel="stylesheet" type="text/css"></link>
+        <style>
+            .stimulus { font-size: 36px; }
+            .questions { font-size: 32px; }
+            img { width: 80%;  height: 80%; }  
+            html { font-size: 24px; }
+        </style>
+    </head>
+    
+    <body style="background-color:gray;">
+        <div id='score'>Current Score: <span id='scoreNum'>points will be collected only during the experiment</span></div>
+        <div id='jspsych-target'></div>
+    </body>
+
+    <script>
+
+        /* global variabels */
+
+        var psiturk = new PsiTurk(uniqueId, adServerLoc, mode);
+
+        // select libraries 
+        var base_path = '/static/img/'
+        var lib_path = ['seed1/', 'seed2/', 'seed3/', 'seed4/']
+        var lib_index = Math.floor(Math.random()*lib_path.length);
+        var library = base_path + lib_path[lib_index];
+
+        // points for exp
+        var points = 0;
+        var trail_points = 0;
+        var wm_acc = 0;
+        var trialN = 0
+
+        var cursor_off = {
+            type: 'call-function',
+            func: function() {
+                document.body.style.cursor= "none";
+            }
+        }
+
+        var cursor_on = {
+            type: 'call-function',
+            func: function() {
+                document.body.style.cursor= "auto";
+            }
+        }
+
+        // repeat practice / instractions
+        var repeat = 0
+
+        // for questionaires 
+        var race_s = ["White", "Black or African American", "Asian", "American Indian/Alaskan native", "Native Hawaiian or Other Pacific Islander", "Other or Mixed", "Prefer not to say"];
+        var edu_s = ['Some High School', 'High School', "Bachelor's Degree", "Master's Degree", 'Ph.D. or higher', 'Trade School', 'Prefer not to say'];
+        var income_s = ['Less than $25,000', '$25,000 - $50,000', '$50,000 - $100,000', '$100,000 - $200,000', 'More than $200,000', 'Prefer not to say'];
+
+
+        /* load images */
+
+        var images = [
+            base_path + 'mask.png',
+
+            base_path + 'inst/WMDM_inst1.png',    base_path + 'inst/WMDM_inst2.png',
+            base_path + 'inst/WMDM_inst3.png',    base_path + 'inst/WMDM_inst4.png',
+            base_path + 'inst/WMDM_inst5.png',    base_path + 'inst/WMDM_inst6.png',
+            base_path + 'inst/WMDM_inst7.png',    base_path + 'inst/WMDM_inst8.png',
+            base_path + 'inst/WMDM_inst9.png',    base_path + 'inst/WMDM_inst10.png',
+            base_path + 'inst/WMDM_inst11.png',   base_path + 'inst/WMDM_inst12.png',  
+            base_path + 'inst/WMDM_inst13.png', 
+
+            base_path + 'prac/WM_0_dots.png',  base_path + 'prac/DM_0.png',   base_path + 'prac/WM_0_answer.png',
+            base_path + 'prac/WM_1_dots.png',  base_path + 'prac/DM_1.png',   base_path + 'prac/WM_1_answer.png',
+            base_path + 'prac/WM_2_dots.png',  base_path + 'prac/DM_2.png',   base_path + 'prac/WM_2_answer.png',
+            base_path + 'prac/WM_3_dots.png',  base_path + 'prac/DM_3.png',   base_path + 'prac/WM_3_answer.png',
+            base_path + 'prac/WM_4_dots.png',  base_path + 'prac/DM_4.png',   base_path + 'prac/WM_4_answer.png',
+            base_path + 'prac/WM_5_dots.png',  base_path + 'prac/DM_5.png',   base_path + 'prac/WM_5_answer.png',
+            
+
+            base_path + 'inst/WMDM_pracEnd.png',
+
+            library + 'WM_0_dots.png',  library + 'DM_0.png', library + 'WM_0_answer.png',   
+            library + 'WM_1_dots.png',  library + 'DM_1.png', library + 'WM_1_answer.png',   
+            library + 'WM_2_dots.png',  library + 'DM_2.png', library + 'WM_2_answer.png',   
+            library + 'WM_3_dots.png',  library + 'DM_3.png', library + 'WM_3_answer.png',   
+            library + 'WM_4_dots.png',  library + 'DM_4.png', library + 'WM_4_answer.png',   
+            library + 'WM_5_dots.png',  library + 'DM_5.png', library + 'WM_5_answer.png',   
+            library + 'WM_6_dots.png',  library + 'DM_6.png', library + 'WM_6_answer.png',   
+            library + 'WM_7_dots.png',  library + 'DM_7.png', library + 'WM_7_answer.png',   
+            library + 'WM_8_dots.png',  library + 'DM_8.png', library + 'WM_8_answer.png',   
+            library + 'WM_9_dots.png',  library + 'DM_9.png', library + 'WM_9_answer.png',   
+            library + 'WM_10_dots.png',  library + 'DM_10.png', library + 'WM_10_answer.png',   
+            library + 'WM_11_dots.png',  library + 'DM_11.png', library + 'WM_11_answer.png',   
+            library + 'WM_12_dots.png',  library + 'DM_12.png', library + 'WM_12_answer.png',   
+            library + 'WM_13_dots.png',  library + 'DM_13.png', library + 'WM_13_answer.png',   
+            library + 'WM_14_dots.png',  library + 'DM_14.png', library + 'WM_14_answer.png',   
+            library + 'WM_15_dots.png',  library + 'DM_15.png', library + 'WM_15_answer.png',   
+            library + 'WM_16_dots.png',  library + 'DM_16.png', library + 'WM_16_answer.png',   
+            library + 'WM_17_dots.png',  library + 'DM_17.png', library + 'WM_17_answer.png',   
+            library + 'WM_18_dots.png',  library + 'DM_18.png', library + 'WM_18_answer.png',   
+            library + 'WM_19_dots.png',  library + 'DM_19.png', library + 'WM_19_answer.png',   
+            library + 'WM_20_dots.png',  library + 'DM_20.png', library + 'WM_20_answer.png',   
+            library + 'WM_21_dots.png',  library + 'DM_21.png', library + 'WM_21_answer.png',   
+            library + 'WM_22_dots.png',  library + 'DM_22.png', library + 'WM_22_answer.png',   
+            library + 'WM_23_dots.png',  library + 'DM_23.png', library + 'WM_23_answer.png',   
+            library + 'WM_24_dots.png',  library + 'DM_24.png', library + 'WM_24_answer.png',   
+            library + 'WM_25_dots.png',  library + 'DM_25.png', library + 'WM_25_answer.png',   
+            library + 'WM_26_dots.png',  library + 'DM_26.png', library + 'WM_26_answer.png',   
+            library + 'WM_27_dots.png',  library + 'DM_27.png', library + 'WM_27_answer.png',   
+            library + 'WM_28_dots.png',  library + 'DM_28.png', library + 'WM_28_answer.png',   
+            library + 'WM_29_dots.png',  library + 'DM_29.png', library + 'WM_29_answer.png',   
+            library + 'WM_30_dots.png',  library + 'DM_30.png', library + 'WM_30_answer.png',   
+            library + 'WM_31_dots.png',  library + 'DM_31.png', library + 'WM_31_answer.png',   
+            library + 'WM_32_dots.png',  library + 'DM_32.png', library + 'WM_32_answer.png',   
+            library + 'WM_33_dots.png',  library + 'DM_33.png', library + 'WM_33_answer.png',   
+            library + 'WM_34_dots.png',  library + 'DM_34.png', library + 'WM_34_answer.png',   
+            library + 'WM_35_dots.png',  library + 'DM_35.png', library + 'WM_35_answer.png',   
+            library + 'WM_36_dots.png',  library + 'DM_36.png', library + 'WM_36_answer.png',   
+            library + 'WM_37_dots.png',  library + 'DM_37.png', library + 'WM_37_answer.png',   
+            library + 'WM_38_dots.png',  library + 'DM_38.png', library + 'WM_38_answer.png',   
+            library + 'WM_39_dots.png',  library + 'DM_39.png', library + 'WM_39_answer.png',   
+            library + 'WM_40_dots.png',  library + 'DM_40.png', library + 'WM_40_answer.png',   
+            library + 'WM_41_dots.png',  library + 'DM_41.png', library + 'WM_41_answer.png',   
+            library + 'WM_42_dots.png',  library + 'DM_42.png', library + 'WM_42_answer.png',   
+            library + 'WM_43_dots.png',  library + 'DM_43.png', library + 'WM_43_answer.png',   
+            library + 'WM_44_dots.png',  library + 'DM_44.png', library + 'WM_44_answer.png',   
+            library + 'WM_45_dots.png',  library + 'DM_45.png', library + 'WM_45_answer.png',   
+            library + 'WM_46_dots.png',  library + 'DM_46.png', library + 'WM_46_answer.png',   
+            library + 'WM_47_dots.png',  library + 'DM_47.png', library + 'WM_47_answer.png',   
+            library + 'WM_48_dots.png',  library + 'DM_48.png', library + 'WM_48_answer.png',   
+            library + 'WM_49_dots.png',  library + 'DM_49.png', library + 'WM_49_answer.png',   
+            library + 'WM_50_dots.png',  library + 'DM_50.png', library + 'WM_50_answer.png',   
+            library + 'WM_51_dots.png',  library + 'DM_51.png', library + 'WM_51_answer.png',   
+            library + 'WM_52_dots.png',  library + 'DM_52.png', library + 'WM_52_answer.png',   
+            library + 'WM_53_dots.png',  library + 'DM_53.png', library + 'WM_53_answer.png',   
+            library + 'WM_54_dots.png',  library + 'DM_54.png', library + 'WM_54_answer.png',   
+            library + 'WM_55_dots.png',  library + 'DM_55.png', library + 'WM_55_answer.png',   
+            library + 'WM_56_dots.png',  library + 'DM_56.png', library + 'WM_56_answer.png',   
+            library + 'WM_57_dots.png',  library + 'DM_57.png', library + 'WM_57_answer.png',   
+            library + 'WM_58_dots.png',  library + 'DM_58.png', library + 'WM_58_answer.png',   
+            library + 'WM_59_dots.png',  library + 'DM_59.png', library + 'WM_59_answer.png',   
+            library + 'WM_60_dots.png',  library + 'DM_60.png', library + 'WM_60_answer.png',   
+            library + 'WM_61_dots.png',  library + 'DM_61.png', library + 'WM_61_answer.png',   
+            library + 'WM_62_dots.png',  library + 'DM_62.png', library + 'WM_62_answer.png',   
+            library + 'WM_63_dots.png',  library + 'DM_63.png', library + 'WM_63_answer.png',   
+            library + 'WM_64_dots.png',  library + 'DM_64.png', library + 'WM_64_answer.png',   
+            library + 'WM_65_dots.png',  library + 'DM_65.png', library + 'WM_65_answer.png',   
+            library + 'WM_66_dots.png',  library + 'DM_66.png', library + 'WM_66_answer.png',   
+            library + 'WM_67_dots.png',  library + 'DM_67.png', library + 'WM_67_answer.png',   
+            library + 'WM_68_dots.png',  library + 'DM_68.png', library + 'WM_68_answer.png',   
+            library + 'WM_69_dots.png',  library + 'DM_69.png', library + 'WM_69_answer.png',   
+            library + 'WM_70_dots.png',  library + 'DM_70.png', library + 'WM_70_answer.png',   
+            library + 'WM_71_dots.png',  library + 'DM_71.png', library + 'WM_71_answer.png',   
+            library + 'WM_72_dots.png',  library + 'DM_72.png', library + 'WM_72_answer.png',   
+            library + 'WM_73_dots.png',  library + 'DM_73.png', library + 'WM_73_answer.png',   
+            library + 'WM_74_dots.png',  library + 'DM_74.png', library + 'WM_74_answer.png',   
+            library + 'WM_75_dots.png',  library + 'DM_75.png', library + 'WM_75_answer.png',   
+            library + 'WM_76_dots.png',  library + 'DM_76.png', library + 'WM_76_answer.png',   
+            library + 'WM_77_dots.png',  library + 'DM_77.png', library + 'WM_77_answer.png',   
+            library + 'WM_78_dots.png',  library + 'DM_78.png', library + 'WM_78_answer.png',   
+            library + 'WM_79_dots.png',  library + 'DM_79.png', library + 'WM_79_answer.png',   
+            library + 'WM_80_dots.png',  library + 'DM_80.png', library + 'WM_80_answer.png',   
+            library + 'WM_81_dots.png',  library + 'DM_81.png', library + 'WM_81_answer.png',   
+            library + 'WM_82_dots.png',  library + 'DM_82.png', library + 'WM_82_answer.png',   
+            library + 'WM_83_dots.png',  library + 'DM_83.png', library + 'WM_83_answer.png',   
+            library + 'WM_84_dots.png',  library + 'DM_84.png', library + 'WM_84_answer.png',   
+            library + 'WM_85_dots.png',  library + 'DM_85.png', library + 'WM_85_answer.png',   
+            library + 'WM_86_dots.png',  library + 'DM_86.png', library + 'WM_86_answer.png',   
+            library + 'WM_87_dots.png',  library + 'DM_87.png', library + 'WM_87_answer.png',   
+            library + 'WM_88_dots.png',  library + 'DM_88.png', library + 'WM_88_answer.png',   
+            library + 'WM_89_dots.png',  library + 'DM_89.png', library + 'WM_89_answer.png',   
+            library + 'WM_90_dots.png',  library + 'DM_90.png', library + 'WM_90_answer.png',   
+            library + 'WM_91_dots.png',  library + 'DM_91.png', library + 'WM_91_answer.png',   
+            library + 'WM_92_dots.png',  library + 'DM_92.png', library + 'WM_92_answer.png',   
+            library + 'WM_93_dots.png',  library + 'DM_93.png', library + 'WM_93_answer.png',   
+            library + 'WM_94_dots.png',  library + 'DM_94.png', library + 'WM_94_answer.png',   
+            library + 'WM_95_dots.png',  library + 'DM_95.png', library + 'WM_95_answer.png',   
+            library + 'WM_96_dots.png',  library + 'DM_96.png', library + 'WM_96_answer.png',   
+            library + 'WM_97_dots.png',  library + 'DM_97.png', library + 'WM_97_answer.png',   
+            library + 'WM_98_dots.png',  library + 'DM_98.png', library + 'WM_98_answer.png',   
+            library + 'WM_99_dots.png',  library + 'DM_99.png', library + 'WM_99_answer.png',   
+            library + 'WM_100_dots.png',  library + 'DM_100.png', library + 'WM_100_answer.png',   
+            library + 'WM_101_dots.png',  library + 'DM_101.png', library + 'WM_101_answer.png',   
+            library + 'WM_102_dots.png',  library + 'DM_102.png', library + 'WM_102_answer.png',   
+            library + 'WM_103_dots.png',  library + 'DM_103.png', library + 'WM_103_answer.png',   
+            library + 'WM_104_dots.png',  library + 'DM_104.png', library + 'WM_104_answer.png',   
+            library + 'WM_105_dots.png',  library + 'DM_105.png', library + 'WM_105_answer.png',   
+            library + 'WM_106_dots.png',  library + 'DM_106.png', library + 'WM_106_answer.png',   
+            library + 'WM_107_dots.png',  library + 'DM_107.png', library + 'WM_107_answer.png',   
+            library + 'WM_108_dots.png',  library + 'DM_108.png', library + 'WM_108_answer.png',   
+            library + 'WM_109_dots.png',  library + 'DM_109.png', library + 'WM_109_answer.png',   
+            library + 'WM_110_dots.png',  library + 'DM_110.png', library + 'WM_110_answer.png',   
+            library + 'WM_111_dots.png',  library + 'DM_111.png', library + 'WM_111_answer.png',   
+            library + 'WM_112_dots.png',  library + 'DM_112.png', library + 'WM_112_answer.png',   
+            library + 'WM_113_dots.png',  library + 'DM_113.png', library + 'WM_113_answer.png',   
+            library + 'WM_114_dots.png',  library + 'DM_114.png', library + 'WM_114_answer.png',   
+            library + 'WM_115_dots.png',  library + 'DM_115.png', library + 'WM_115_answer.png',   
+            library + 'WM_116_dots.png',  library + 'DM_116.png', library + 'WM_116_answer.png',   
+            library + 'WM_117_dots.png',  library + 'DM_117.png', library + 'WM_117_answer.png',   
+            library + 'WM_118_dots.png',  library + 'DM_118.png', library + 'WM_118_answer.png',   
+            library + 'WM_119_dots.png',  library + 'DM_119.png', library + 'WM_119_answer.png',   
+            library + 'WM_120_dots.png',  library + 'DM_120.png', library + 'WM_120_answer.png',   
+            library + 'WM_121_dots.png',  library + 'DM_121.png', library + 'WM_121_answer.png',   
+            library + 'WM_122_dots.png',  library + 'DM_122.png', library + 'WM_122_answer.png',   
+            library + 'WM_123_dots.png',  library + 'DM_123.png', library + 'WM_123_answer.png',   
+            library + 'WM_124_dots.png',  library + 'DM_124.png', library + 'WM_124_answer.png',   
+            library + 'WM_125_dots.png',  library + 'DM_125.png', library + 'WM_125_answer.png',   
+            library + 'WM_126_dots.png',  library + 'DM_126.png', library + 'WM_126_answer.png',   
+            library + 'WM_127_dots.png',  library + 'DM_127.png', library + 'WM_127_answer.png',   
+            library + 'WM_128_dots.png',  library + 'DM_128.png', library + 'WM_128_answer.png',   
+            library + 'WM_129_dots.png',  library + 'DM_129.png', library + 'WM_129_answer.png',   
+            library + 'WM_130_dots.png',  library + 'DM_130.png', library + 'WM_130_answer.png',   
+            library + 'WM_131_dots.png',  library + 'DM_131.png', library + 'WM_131_answer.png',   
+            library + 'WM_132_dots.png',  library + 'DM_132.png', library + 'WM_132_answer.png',   
+            library + 'WM_133_dots.png',  library + 'DM_133.png', library + 'WM_133_answer.png',   
+            library + 'WM_134_dots.png',  library + 'DM_134.png', library + 'WM_134_answer.png',   
+            library + 'WM_135_dots.png',  library + 'DM_135.png', library + 'WM_135_answer.png',   
+            library + 'WM_136_dots.png',  library + 'DM_136.png', library + 'WM_136_answer.png',   
+            library + 'WM_137_dots.png',  library + 'DM_137.png', library + 'WM_137_answer.png',   
+            library + 'WM_138_dots.png',  library + 'DM_138.png', library + 'WM_138_answer.png',   
+            library + 'WM_139_dots.png',  library + 'DM_139.png', library + 'WM_139_answer.png',   
+            library + 'WM_140_dots.png',  library + 'DM_140.png', library + 'WM_140_answer.png',   
+            library + 'WM_141_dots.png',  library + 'DM_141.png', library + 'WM_141_answer.png',   
+            library + 'WM_142_dots.png',  library + 'DM_142.png', library + 'WM_142_answer.png',   
+            library + 'WM_143_dots.png',  library + 'DM_143.png', library + 'WM_143_answer.png',   
+            library + 'WM_144_dots.png',  library + 'DM_144.png', library + 'WM_144_answer.png',   
+            library + 'WM_145_dots.png',  library + 'DM_145.png', library + 'WM_145_answer.png',   
+            library + 'WM_146_dots.png',  library + 'DM_146.png', library + 'WM_146_answer.png',   
+            library + 'WM_147_dots.png',  library + 'DM_147.png', library + 'WM_147_answer.png',   
+            library + 'WM_148_dots.png',  library + 'DM_148.png', library + 'WM_148_answer.png',   
+            library + 'WM_149_dots.png',  library + 'DM_149.png', library + 'WM_149_answer.png',   
+            library + 'WM_150_dots.png',  library + 'DM_150.png', library + 'WM_150_answer.png',   
+            library + 'WM_151_dots.png',  library + 'DM_151.png', library + 'WM_151_answer.png',   
+            library + 'WM_152_dots.png',  library + 'DM_152.png', library + 'WM_152_answer.png',   
+            library + 'WM_153_dots.png',  library + 'DM_153.png', library + 'WM_153_answer.png',   
+            library + 'WM_154_dots.png',  library + 'DM_154.png', library + 'WM_154_answer.png',   
+            library + 'WM_155_dots.png',  library + 'DM_155.png', library + 'WM_155_answer.png',   
+            library + 'WM_156_dots.png',  library + 'DM_156.png', library + 'WM_156_answer.png',   
+            library + 'WM_157_dots.png',  library + 'DM_157.png', library + 'WM_157_answer.png',   
+            library + 'WM_158_dots.png',  library + 'DM_158.png', library + 'WM_158_answer.png',   
+            library + 'WM_159_dots.png',  library + 'DM_159.png', library + 'WM_159_answer.png',   
+            library + 'WM_160_dots.png',  library + 'DM_160.png', library + 'WM_160_answer.png',   
+            library + 'WM_161_dots.png',  library + 'DM_161.png', library + 'WM_161_answer.png',   
+            library + 'WM_162_dots.png',  library + 'DM_162.png', library + 'WM_162_answer.png',   
+            library + 'WM_163_dots.png',  library + 'DM_163.png', library + 'WM_163_answer.png',   
+            library + 'WM_164_dots.png',  library + 'DM_164.png', library + 'WM_164_answer.png',   
+            library + 'WM_165_dots.png',  library + 'DM_165.png', library + 'WM_165_answer.png',   
+            library + 'WM_166_dots.png',  library + 'DM_166.png', library + 'WM_166_answer.png',   
+            library + 'WM_167_dots.png',  library + 'DM_167.png', library + 'WM_167_answer.png',   
+            library + 'WM_168_dots.png',  library + 'DM_168.png', library + 'WM_168_answer.png',   
+            library + 'WM_169_dots.png',  library + 'DM_169.png', library + 'WM_169_answer.png',   
+            library + 'WM_170_dots.png',  library + 'DM_170.png', library + 'WM_170_answer.png',   
+            library + 'WM_171_dots.png',  library + 'DM_171.png', library + 'WM_171_answer.png',   
+            library + 'WM_172_dots.png',  library + 'DM_172.png', library + 'WM_172_answer.png',   
+            library + 'WM_173_dots.png',  library + 'DM_173.png', library + 'WM_173_answer.png',   
+            library + 'WM_174_dots.png',  library + 'DM_174.png', library + 'WM_174_answer.png',   
+            library + 'WM_175_dots.png',  library + 'DM_175.png', library + 'WM_175_answer.png',   
+            library + 'WM_176_dots.png',  library + 'DM_176.png', library + 'WM_176_answer.png',   
+            library + 'WM_177_dots.png',  library + 'DM_177.png', library + 'WM_177_answer.png',   
+            library + 'WM_178_dots.png',  library + 'DM_178.png', library + 'WM_178_answer.png',   
+            library + 'WM_179_dots.png',  library + 'DM_179.png', library + 'WM_179_answer.png',   
+            library + 'WM_180_dots.png',  library + 'DM_180.png', library + 'WM_180_answer.png',   
+            library + 'WM_181_dots.png',  library + 'DM_181.png', library + 'WM_181_answer.png',   
+            library + 'WM_182_dots.png',  library + 'DM_182.png', library + 'WM_182_answer.png',   
+            library + 'WM_183_dots.png',  library + 'DM_183.png', library + 'WM_183_answer.png',   
+            library + 'WM_184_dots.png',  library + 'DM_184.png', library + 'WM_184_answer.png',   
+            library + 'WM_185_dots.png',  library + 'DM_185.png', library + 'WM_185_answer.png',   
+            library + 'WM_186_dots.png',  library + 'DM_186.png', library + 'WM_186_answer.png',   
+            library + 'WM_187_dots.png',  library + 'DM_187.png', library + 'WM_187_answer.png',   
+            library + 'WM_188_dots.png',  library + 'DM_188.png', library + 'WM_188_answer.png',   
+            library + 'WM_189_dots.png',  library + 'DM_189.png', library + 'WM_189_answer.png',   
+            library + 'WM_190_dots.png',  library + 'DM_190.png', library + 'WM_190_answer.png',   
+            library + 'WM_191_dots.png',  library + 'DM_191.png', library + 'WM_191_answer.png',   
+            library + 'WM_192_dots.png',  library + 'DM_192.png', library + 'WM_192_answer.png',   
+            library + 'WM_193_dots.png',  library + 'DM_193.png', library + 'WM_193_answer.png',   
+            library + 'WM_194_dots.png',  library + 'DM_194.png', library + 'WM_194_answer.png',   
+            library + 'WM_195_dots.png',  library + 'DM_195.png', library + 'WM_195_answer.png',   
+            library + 'WM_196_dots.png',  library + 'DM_196.png', library + 'WM_196_answer.png',   
+            library + 'WM_197_dots.png',  library + 'DM_197.png', library + 'WM_197_answer.png',   
+            library + 'WM_198_dots.png',  library + 'DM_198.png', library + 'WM_198_answer.png',   
+            library + 'WM_199_dots.png',  library + 'DM_199.png', library + 'WM_199_answer.png',   
+            library + 'WM_200_dots.png',  library + 'DM_200.png', library + 'WM_200_answer.png',   
+            library + 'WM_201_dots.png',  library + 'DM_201.png', library + 'WM_201_answer.png',   
+            library + 'WM_202_dots.png',  library + 'DM_202.png', library + 'WM_202_answer.png',   
+            library + 'WM_203_dots.png',  library + 'DM_203.png', library + 'WM_203_answer.png',   
+            library + 'WM_204_dots.png',  library + 'DM_204.png', library + 'WM_204_answer.png',   
+            library + 'WM_205_dots.png',  library + 'DM_205.png', library + 'WM_205_answer.png',   
+            library + 'WM_206_dots.png',  library + 'DM_206.png', library + 'WM_206_answer.png',   
+            library + 'WM_207_dots.png',  library + 'DM_207.png', library + 'WM_207_answer.png',   
+            library + 'WM_208_dots.png',  library + 'DM_208.png', library + 'WM_208_answer.png',   
+            library + 'WM_209_dots.png',  library + 'DM_209.png', library + 'WM_209_answer.png',   
+            library + 'WM_210_dots.png',  library + 'DM_210.png', library + 'WM_210_answer.png',   
+            library + 'WM_211_dots.png',  library + 'DM_211.png', library + 'WM_211_answer.png',   
+            library + 'WM_212_dots.png',  library + 'DM_212.png', library + 'WM_212_answer.png',   
+            library + 'WM_213_dots.png',  library + 'DM_213.png', library + 'WM_213_answer.png',   
+            library + 'WM_214_dots.png',  library + 'DM_214.png', library + 'WM_214_answer.png',   
+            library + 'WM_215_dots.png',  library + 'DM_215.png', library + 'WM_215_answer.png',   
+            library + 'WM_216_dots.png',  library + 'DM_216.png', library + 'WM_216_answer.png',   
+            library + 'WM_217_dots.png',  library + 'DM_217.png', library + 'WM_217_answer.png',   
+            library + 'WM_218_dots.png',  library + 'DM_218.png', library + 'WM_218_answer.png',   
+            library + 'WM_219_dots.png',  library + 'DM_219.png', library + 'WM_219_answer.png',   
+            library + 'WM_220_dots.png',  library + 'DM_220.png', library + 'WM_220_answer.png',   
+            library + 'WM_221_dots.png',  library + 'DM_221.png', library + 'WM_221_answer.png',   
+            library + 'WM_222_dots.png',  library + 'DM_222.png', library + 'WM_222_answer.png',   
+            library + 'WM_223_dots.png',  library + 'DM_223.png', library + 'WM_223_answer.png',   
+            library + 'WM_224_dots.png',  library + 'DM_224.png', library + 'WM_224_answer.png',   
+            library + 'WM_225_dots.png',  library + 'DM_225.png', library + 'WM_225_answer.png',   
+            library + 'WM_226_dots.png',  library + 'DM_226.png', library + 'WM_226_answer.png',   
+            library + 'WM_227_dots.png',  library + 'DM_227.png', library + 'WM_227_answer.png',   
+            library + 'WM_228_dots.png',  library + 'DM_228.png', library + 'WM_228_answer.png',   
+            library + 'WM_229_dots.png',  library + 'DM_229.png', library + 'WM_229_answer.png',   
+            library + 'WM_230_dots.png',  library + 'DM_230.png', library + 'WM_230_answer.png',   
+            library + 'WM_231_dots.png',  library + 'DM_231.png', library + 'WM_231_answer.png',   
+            library + 'WM_232_dots.png',  library + 'DM_232.png', library + 'WM_232_answer.png',   
+            library + 'WM_233_dots.png',  library + 'DM_233.png', library + 'WM_233_answer.png',   
+            library + 'WM_234_dots.png',  library + 'DM_234.png', library + 'WM_234_answer.png',   
+            library + 'WM_235_dots.png',  library + 'DM_235.png', library + 'WM_235_answer.png',   
+            library + 'WM_236_dots.png',  library + 'DM_236.png', library + 'WM_236_answer.png',   
+            library + 'WM_237_dots.png',  library + 'DM_237.png', library + 'WM_237_answer.png',   
+            library + 'WM_238_dots.png',  library + 'DM_238.png', library + 'WM_238_answer.png',   
+            library + 'WM_239_dots.png',  library + 'DM_239.png', library + 'WM_239_answer.png',   
+            library + 'WM_240_dots.png',  library + 'DM_240.png', library + 'WM_240_answer.png',   
+            library + 'WM_241_dots.png',  library + 'DM_241.png', library + 'WM_241_answer.png',   
+            library + 'WM_242_dots.png',  library + 'DM_242.png', library + 'WM_242_answer.png',   
+            library + 'WM_243_dots.png',  library + 'DM_243.png', library + 'WM_243_answer.png',   
+            library + 'WM_244_dots.png',  library + 'DM_244.png', library + 'WM_244_answer.png',   
+            library + 'WM_245_dots.png',  library + 'DM_245.png', library + 'WM_245_answer.png',   
+            library + 'WM_246_dots.png',  library + 'DM_246.png', library + 'WM_246_answer.png',   
+            library + 'WM_247_dots.png',  library + 'DM_247.png', library + 'WM_247_answer.png',   
+            library + 'WM_248_dots.png',  library + 'DM_248.png', library + 'WM_248_answer.png',   
+            library + 'WM_249_dots.png',  library + 'DM_249.png', library + 'WM_249_answer.png',   
+            library + 'WM_250_dots.png',  library + 'DM_250.png', library + 'WM_250_answer.png',   
+            library + 'WM_251_dots.png',  library + 'DM_251.png', library + 'WM_251_answer.png',   
+            library + 'WM_252_dots.png',  library + 'DM_252.png', library + 'WM_252_answer.png',   
+            library + 'WM_253_dots.png',  library + 'DM_253.png', library + 'WM_253_answer.png',   
+            library + 'WM_254_dots.png',  library + 'DM_254.png', library + 'WM_254_answer.png',   
+            library + 'WM_255_dots.png',  library + 'DM_255.png', library + 'WM_255_answer.png',   
+            library + 'WM_256_dots.png',  library + 'DM_256.png', library + 'WM_256_answer.png',   
+            library + 'WM_257_dots.png',  library + 'DM_257.png', library + 'WM_257_answer.png',   
+            library + 'WM_258_dots.png',  library + 'DM_258.png', library + 'WM_258_answer.png',   
+            library + 'WM_259_dots.png',  library + 'DM_259.png', library + 'WM_259_answer.png',   
+            library + 'WM_260_dots.png',  library + 'DM_260.png', library + 'WM_260_answer.png',   
+            library + 'WM_261_dots.png',  library + 'DM_261.png', library + 'WM_261_answer.png',   
+            library + 'WM_262_dots.png',  library + 'DM_262.png', library + 'WM_262_answer.png',   
+            library + 'WM_263_dots.png',  library + 'DM_263.png', library + 'WM_263_answer.png',   
+            library + 'WM_264_dots.png',  library + 'DM_264.png', library + 'WM_264_answer.png',   
+            library + 'WM_265_dots.png',  library + 'DM_265.png', library + 'WM_265_answer.png',   
+            library + 'WM_266_dots.png',  library + 'DM_266.png', library + 'WM_266_answer.png',   
+            library + 'WM_267_dots.png',  library + 'DM_267.png', library + 'WM_267_answer.png',   
+            library + 'WM_268_dots.png',  library + 'DM_268.png', library + 'WM_268_answer.png',   
+            library + 'WM_269_dots.png',  library + 'DM_269.png', library + 'WM_269_answer.png',   
+            library + 'WM_270_dots.png',  library + 'DM_270.png', library + 'WM_270_answer.png',   
+            library + 'WM_271_dots.png',  library + 'DM_271.png', library + 'WM_271_answer.png',   
+            library + 'WM_272_dots.png',  library + 'DM_272.png', library + 'WM_272_answer.png',   
+            library + 'WM_273_dots.png',  library + 'DM_273.png', library + 'WM_273_answer.png',   
+            library + 'WM_274_dots.png',  library + 'DM_274.png', library + 'WM_274_answer.png',   
+            library + 'WM_275_dots.png',  library + 'DM_275.png', library + 'WM_275_answer.png',   
+            library + 'WM_276_dots.png',  library + 'DM_276.png', library + 'WM_276_answer.png',   
+            library + 'WM_277_dots.png',  library + 'DM_277.png', library + 'WM_277_answer.png',   
+            library + 'WM_278_dots.png',  library + 'DM_278.png', library + 'WM_278_answer.png',   
+            library + 'WM_279_dots.png',  library + 'DM_279.png', library + 'WM_279_answer.png',   
+            library + 'WM_280_dots.png',  library + 'DM_280.png', library + 'WM_280_answer.png',   
+            library + 'WM_281_dots.png',  library + 'DM_281.png', library + 'WM_281_answer.png',   
+            library + 'WM_282_dots.png',  library + 'DM_282.png', library + 'WM_282_answer.png',   
+            library + 'WM_283_dots.png',  library + 'DM_283.png', library + 'WM_283_answer.png',   
+            library + 'WM_284_dots.png',  library + 'DM_284.png', library + 'WM_284_answer.png',   
+            library + 'WM_285_dots.png',  library + 'DM_285.png', library + 'WM_285_answer.png',   
+            library + 'WM_286_dots.png',  library + 'DM_286.png', library + 'WM_286_answer.png',   
+            library + 'WM_287_dots.png',  library + 'DM_287.png', library + 'WM_287_answer.png',   
+            library + 'WM_288_dots.png',  library + 'DM_288.png', library + 'WM_288_answer.png',   
+            library + 'WM_289_dots.png',  library + 'DM_289.png', library + 'WM_289_answer.png',   
+            library + 'WM_290_dots.png',  library + 'DM_290.png', library + 'WM_290_answer.png',   
+            library + 'WM_291_dots.png',  library + 'DM_291.png', library + 'WM_291_answer.png',   
+            library + 'WM_292_dots.png',  library + 'DM_292.png', library + 'WM_292_answer.png',   
+            library + 'WM_293_dots.png',  library + 'DM_293.png', library + 'WM_293_answer.png'
+
+        ];
+
+        var instimages = [
+            {inst: base_path + 'inst/WMDM_inst1.png'},
+            {inst: base_path + 'inst/WMDM_inst2.png'},
+            {inst: base_path + 'inst/WMDM_inst3.png'},
+            {inst: base_path + 'inst/WMDM_inst4.png'},
+            {inst: base_path + 'inst/WMDM_inst5.png'},
+            {inst: base_path + 'inst/WMDM_inst6.png'},
+            {inst: base_path + 'inst/WMDM_inst7.png'},
+            {inst: base_path + 'inst/WMDM_inst8.png'},
+            {inst: base_path + 'inst/WMDM_inst9.png'},
+            {inst: base_path + 'inst/WMDM_inst10.png'},
+            {inst: base_path + 'inst/WMDM_inst11.png'},
+            {inst: base_path + 'inst/WMDM_inst12.png'},
+            {inst: base_path + 'inst/WMDM_inst13.png'},
+        ]
+
+        var prac_list = [
+            {dots: base_path + 'prac/WM_0_dots.png', DM_bank: base_path + 'prac/DM_0.png',dots_answer:  base_path + 'prac/WM_0_answer.png', correct: '1', risk: '25', amount: '15', load: 'Yes'},
+            {dots: base_path + 'prac/WM_1_dots.png', DM_bank: base_path + 'prac/DM_1.png',dots_answer:  base_path + 'prac/WM_1_answer.png', correct: '0', risk: '50', amount: '15', load: 'Yes'},
+            {dots: base_path + 'prac/WM_2_dots.png', DM_bank: base_path + 'prac/DM_2.png',dots_answer:  base_path + 'prac/WM_2_answer.png', correct: '0', risk: '50', amount: '15', load: 'Yes'},
+            {dots: base_path + 'prac/WM_3_dots.png', DM_bank: base_path + 'prac/DM_3.png',dots_answer:  base_path + 'prac/WM_3_answer.png', correct: '1', risk: '50', amount: '15', load: 'Yes'},
+            {dots: base_path + 'prac/WM_4_dots.png', DM_bank: base_path + 'prac/DM_4.png',dots_answer:  base_path + 'prac/WM_4_answer.png', correct: '0', risk: '50', amount: '15', load: 'No'},
+            {dots: base_path + 'prac/WM_5_dots.png', DM_bank: base_path + 'prac/DM_5.png',dots_answer:  base_path + 'prac/WM_5_answer.png', correct: '1', risk: '75', amount: '15', load: 'No'},
+        ]
+
+        var trial_list = [
+            {dots: library + 'WM_0_dots.png', DM_bank: library + 'DM_0.png', dots_answer: library + 'WM_0_answer.png', correct: '1', risk: '50', amount: '5', load: 'Yes'},
+            {dots: library + 'WM_1_dots.png', DM_bank: library + 'DM_1.png', dots_answer: library + 'WM_1_answer.png', correct: '1', risk: '25', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_2_dots.png', DM_bank: library + 'DM_2.png', dots_answer: library + 'WM_2_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_3_dots.png', DM_bank: library + 'DM_3.png', dots_answer: library + 'WM_3_answer.png', correct: '1', risk: '75', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_4_dots.png', DM_bank: library + 'DM_4.png', dots_answer: library + 'WM_4_answer.png', correct: '1', risk: '25', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_5_dots.png', DM_bank: library + 'DM_5.png', dots_answer: library + 'WM_5_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_6_dots.png', DM_bank: library + 'DM_6.png', dots_answer: library + 'WM_6_answer.png', correct: '1', risk: '75', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_7_dots.png', DM_bank: library + 'DM_7.png', dots_answer: library + 'WM_7_answer.png', correct: '1', risk: '25', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_8_dots.png', DM_bank: library + 'DM_8.png', dots_answer: library + 'WM_8_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_9_dots.png', DM_bank: library + 'DM_9.png', dots_answer: library + 'WM_9_answer.png', correct: '1', risk: '75', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_10_dots.png', DM_bank: library + 'DM_10.png', dots_answer: library + 'WM_10_answer.png', correct: '1', risk: '25', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_11_dots.png', DM_bank: library + 'DM_11.png', dots_answer: library + 'WM_11_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_12_dots.png', DM_bank: library + 'DM_12.png', dots_answer: library + 'WM_12_answer.png', correct: '1', risk: '75', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_13_dots.png', DM_bank: library + 'DM_13.png', dots_answer: library + 'WM_13_answer.png', correct: '1', risk: '25', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_14_dots.png', DM_bank: library + 'DM_14.png', dots_answer: library + 'WM_14_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_15_dots.png', DM_bank: library + 'DM_15.png', dots_answer: library + 'WM_15_answer.png', correct: '1', risk: '75', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_16_dots.png', DM_bank: library + 'DM_16.png', dots_answer: library + 'WM_16_answer.png', correct: '1', risk: '25', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_17_dots.png', DM_bank: library + 'DM_17.png', dots_answer: library + 'WM_17_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_18_dots.png', DM_bank: library + 'DM_18.png', dots_answer: library + 'WM_18_answer.png', correct: '1', risk: '75', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_19_dots.png', DM_bank: library + 'DM_19.png', dots_answer: library + 'WM_19_answer.png', correct: '1', risk: '25', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_20_dots.png', DM_bank: library + 'DM_20.png', dots_answer: library + 'WM_20_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_21_dots.png', DM_bank: library + 'DM_21.png', dots_answer: library + 'WM_21_answer.png', correct: '1', risk: '75', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_22_dots.png', DM_bank: library + 'DM_22.png', dots_answer: library + 'WM_22_answer.png', correct: '1', risk: '25', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_23_dots.png', DM_bank: library + 'DM_23.png', dots_answer: library + 'WM_23_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_24_dots.png', DM_bank: library + 'DM_24.png', dots_answer: library + 'WM_24_answer.png', correct: '1', risk: '75', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_25_dots.png', DM_bank: library + 'DM_25.png', dots_answer: library + 'WM_25_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_26_dots.png', DM_bank: library + 'DM_26.png', dots_answer: library + 'WM_26_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_27_dots.png', DM_bank: library + 'DM_27.png', dots_answer: library + 'WM_27_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_28_dots.png', DM_bank: library + 'DM_28.png', dots_answer: library + 'WM_28_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_29_dots.png', DM_bank: library + 'DM_29.png', dots_answer: library + 'WM_29_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_30_dots.png', DM_bank: library + 'DM_30.png', dots_answer: library + 'WM_30_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_31_dots.png', DM_bank: library + 'DM_31.png', dots_answer: library + 'WM_31_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_32_dots.png', DM_bank: library + 'DM_32.png', dots_answer: library + 'WM_32_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_33_dots.png', DM_bank: library + 'DM_33.png', dots_answer: library + 'WM_33_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_34_dots.png', DM_bank: library + 'DM_34.png', dots_answer: library + 'WM_34_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_35_dots.png', DM_bank: library + 'DM_35.png', dots_answer: library + 'WM_35_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_36_dots.png', DM_bank: library + 'DM_36.png', dots_answer: library + 'WM_36_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_37_dots.png', DM_bank: library + 'DM_37.png', dots_answer: library + 'WM_37_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_38_dots.png', DM_bank: library + 'DM_38.png', dots_answer: library + 'WM_38_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_39_dots.png', DM_bank: library + 'DM_39.png', dots_answer: library + 'WM_39_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_40_dots.png', DM_bank: library + 'DM_40.png', dots_answer: library + 'WM_40_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_41_dots.png', DM_bank: library + 'DM_41.png', dots_answer: library + 'WM_41_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_42_dots.png', DM_bank: library + 'DM_42.png', dots_answer: library + 'WM_42_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_43_dots.png', DM_bank: library + 'DM_43.png', dots_answer: library + 'WM_43_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_44_dots.png', DM_bank: library + 'DM_44.png', dots_answer: library + 'WM_44_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_45_dots.png', DM_bank: library + 'DM_45.png', dots_answer: library + 'WM_45_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_46_dots.png', DM_bank: library + 'DM_46.png', dots_answer: library + 'WM_46_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_47_dots.png', DM_bank: library + 'DM_47.png', dots_answer: library + 'WM_47_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_48_dots.png', DM_bank: library + 'DM_48.png', dots_answer: library + 'WM_48_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_49_dots.png', DM_bank: library + 'DM_49.png', dots_answer: library + 'WM_49_answer.png', correct: '1', risk: '50', amount: '5', load: 'Yes'},
+            {dots: library + 'WM_50_dots.png', DM_bank: library + 'DM_50.png', dots_answer: library + 'WM_50_answer.png', correct: '1', risk: '25', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_51_dots.png', DM_bank: library + 'DM_51.png', dots_answer: library + 'WM_51_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_52_dots.png', DM_bank: library + 'DM_52.png', dots_answer: library + 'WM_52_answer.png', correct: '1', risk: '75', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_53_dots.png', DM_bank: library + 'DM_53.png', dots_answer: library + 'WM_53_answer.png', correct: '1', risk: '25', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_54_dots.png', DM_bank: library + 'DM_54.png', dots_answer: library + 'WM_54_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_55_dots.png', DM_bank: library + 'DM_55.png', dots_answer: library + 'WM_55_answer.png', correct: '1', risk: '75', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_56_dots.png', DM_bank: library + 'DM_56.png', dots_answer: library + 'WM_56_answer.png', correct: '1', risk: '25', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_57_dots.png', DM_bank: library + 'DM_57.png', dots_answer: library + 'WM_57_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_58_dots.png', DM_bank: library + 'DM_58.png', dots_answer: library + 'WM_58_answer.png', correct: '1', risk: '75', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_59_dots.png', DM_bank: library + 'DM_59.png', dots_answer: library + 'WM_59_answer.png', correct: '1', risk: '25', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_60_dots.png', DM_bank: library + 'DM_60.png', dots_answer: library + 'WM_60_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_61_dots.png', DM_bank: library + 'DM_61.png', dots_answer: library + 'WM_61_answer.png', correct: '1', risk: '75', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_62_dots.png', DM_bank: library + 'DM_62.png', dots_answer: library + 'WM_62_answer.png', correct: '1', risk: '25', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_63_dots.png', DM_bank: library + 'DM_63.png', dots_answer: library + 'WM_63_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_64_dots.png', DM_bank: library + 'DM_64.png', dots_answer: library + 'WM_64_answer.png', correct: '1', risk: '75', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_65_dots.png', DM_bank: library + 'DM_65.png', dots_answer: library + 'WM_65_answer.png', correct: '1', risk: '25', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_66_dots.png', DM_bank: library + 'DM_66.png', dots_answer: library + 'WM_66_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_67_dots.png', DM_bank: library + 'DM_67.png', dots_answer: library + 'WM_67_answer.png', correct: '1', risk: '75', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_68_dots.png', DM_bank: library + 'DM_68.png', dots_answer: library + 'WM_68_answer.png', correct: '1', risk: '25', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_69_dots.png', DM_bank: library + 'DM_69.png', dots_answer: library + 'WM_69_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_70_dots.png', DM_bank: library + 'DM_70.png', dots_answer: library + 'WM_70_answer.png', correct: '1', risk: '75', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_71_dots.png', DM_bank: library + 'DM_71.png', dots_answer: library + 'WM_71_answer.png', correct: '1', risk: '25', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_72_dots.png', DM_bank: library + 'DM_72.png', dots_answer: library + 'WM_72_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_73_dots.png', DM_bank: library + 'DM_73.png', dots_answer: library + 'WM_73_answer.png', correct: '1', risk: '75', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_74_dots.png', DM_bank: library + 'DM_74.png', dots_answer: library + 'WM_74_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_75_dots.png', DM_bank: library + 'DM_75.png', dots_answer: library + 'WM_75_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_76_dots.png', DM_bank: library + 'DM_76.png', dots_answer: library + 'WM_76_answer.png', correct: '1', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_77_dots.png', DM_bank: library + 'DM_77.png', dots_answer: library + 'WM_77_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_78_dots.png', DM_bank: library + 'DM_78.png', dots_answer: library + 'WM_78_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_79_dots.png', DM_bank: library + 'DM_79.png', dots_answer: library + 'WM_79_answer.png', correct: '1', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_80_dots.png', DM_bank: library + 'DM_80.png', dots_answer: library + 'WM_80_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_81_dots.png', DM_bank: library + 'DM_81.png', dots_answer: library + 'WM_81_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_82_dots.png', DM_bank: library + 'DM_82.png', dots_answer: library + 'WM_82_answer.png', correct: '1', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_83_dots.png', DM_bank: library + 'DM_83.png', dots_answer: library + 'WM_83_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_84_dots.png', DM_bank: library + 'DM_84.png', dots_answer: library + 'WM_84_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_85_dots.png', DM_bank: library + 'DM_85.png', dots_answer: library + 'WM_85_answer.png', correct: '1', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_86_dots.png', DM_bank: library + 'DM_86.png', dots_answer: library + 'WM_86_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_87_dots.png', DM_bank: library + 'DM_87.png', dots_answer: library + 'WM_87_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_88_dots.png', DM_bank: library + 'DM_88.png', dots_answer: library + 'WM_88_answer.png', correct: '1', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_89_dots.png', DM_bank: library + 'DM_89.png', dots_answer: library + 'WM_89_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_90_dots.png', DM_bank: library + 'DM_90.png', dots_answer: library + 'WM_90_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_91_dots.png', DM_bank: library + 'DM_91.png', dots_answer: library + 'WM_91_answer.png', correct: '1', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_92_dots.png', DM_bank: library + 'DM_92.png', dots_answer: library + 'WM_92_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_93_dots.png', DM_bank: library + 'DM_93.png', dots_answer: library + 'WM_93_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_94_dots.png', DM_bank: library + 'DM_94.png', dots_answer: library + 'WM_94_answer.png', correct: '1', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_95_dots.png', DM_bank: library + 'DM_95.png', dots_answer: library + 'WM_95_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_96_dots.png', DM_bank: library + 'DM_96.png', dots_answer: library + 'WM_96_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_97_dots.png', DM_bank: library + 'DM_97.png', dots_answer: library + 'WM_97_answer.png', correct: '1', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_98_dots.png', DM_bank: library + 'DM_98.png', dots_answer: library + 'WM_98_answer.png', correct: '0', risk: '50', amount: '5', load: 'Yes'},
+            {dots: library + 'WM_99_dots.png', DM_bank: library + 'DM_99.png', dots_answer: library + 'WM_99_answer.png', correct: '0', risk: '25', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_100_dots.png', DM_bank: library + 'DM_100.png', dots_answer: library + 'WM_100_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_101_dots.png', DM_bank: library + 'DM_101.png', dots_answer: library + 'WM_101_answer.png', correct: '0', risk: '75', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_102_dots.png', DM_bank: library + 'DM_102.png', dots_answer: library + 'WM_102_answer.png', correct: '0', risk: '25', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_103_dots.png', DM_bank: library + 'DM_103.png', dots_answer: library + 'WM_103_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_104_dots.png', DM_bank: library + 'DM_104.png', dots_answer: library + 'WM_104_answer.png', correct: '0', risk: '75', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_105_dots.png', DM_bank: library + 'DM_105.png', dots_answer: library + 'WM_105_answer.png', correct: '0', risk: '25', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_106_dots.png', DM_bank: library + 'DM_106.png', dots_answer: library + 'WM_106_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_107_dots.png', DM_bank: library + 'DM_107.png', dots_answer: library + 'WM_107_answer.png', correct: '0', risk: '75', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_108_dots.png', DM_bank: library + 'DM_108.png', dots_answer: library + 'WM_108_answer.png', correct: '0', risk: '25', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_109_dots.png', DM_bank: library + 'DM_109.png', dots_answer: library + 'WM_109_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_110_dots.png', DM_bank: library + 'DM_110.png', dots_answer: library + 'WM_110_answer.png', correct: '0', risk: '75', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_111_dots.png', DM_bank: library + 'DM_111.png', dots_answer: library + 'WM_111_answer.png', correct: '0', risk: '25', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_112_dots.png', DM_bank: library + 'DM_112.png', dots_answer: library + 'WM_112_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_113_dots.png', DM_bank: library + 'DM_113.png', dots_answer: library + 'WM_113_answer.png', correct: '0', risk: '75', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_114_dots.png', DM_bank: library + 'DM_114.png', dots_answer: library + 'WM_114_answer.png', correct: '0', risk: '25', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_115_dots.png', DM_bank: library + 'DM_115.png', dots_answer: library + 'WM_115_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_116_dots.png', DM_bank: library + 'DM_116.png', dots_answer: library + 'WM_116_answer.png', correct: '0', risk: '75', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_117_dots.png', DM_bank: library + 'DM_117.png', dots_answer: library + 'WM_117_answer.png', correct: '0', risk: '25', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_118_dots.png', DM_bank: library + 'DM_118.png', dots_answer: library + 'WM_118_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_119_dots.png', DM_bank: library + 'DM_119.png', dots_answer: library + 'WM_119_answer.png', correct: '0', risk: '75', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_120_dots.png', DM_bank: library + 'DM_120.png', dots_answer: library + 'WM_120_answer.png', correct: '0', risk: '25', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_121_dots.png', DM_bank: library + 'DM_121.png', dots_answer: library + 'WM_121_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_122_dots.png', DM_bank: library + 'DM_122.png', dots_answer: library + 'WM_122_answer.png', correct: '0', risk: '75', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_123_dots.png', DM_bank: library + 'DM_123.png', dots_answer: library + 'WM_123_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_124_dots.png', DM_bank: library + 'DM_124.png', dots_answer: library + 'WM_124_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_125_dots.png', DM_bank: library + 'DM_125.png', dots_answer: library + 'WM_125_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_126_dots.png', DM_bank: library + 'DM_126.png', dots_answer: library + 'WM_126_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_127_dots.png', DM_bank: library + 'DM_127.png', dots_answer: library + 'WM_127_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_128_dots.png', DM_bank: library + 'DM_128.png', dots_answer: library + 'WM_128_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_129_dots.png', DM_bank: library + 'DM_129.png', dots_answer: library + 'WM_129_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_130_dots.png', DM_bank: library + 'DM_130.png', dots_answer: library + 'WM_130_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_131_dots.png', DM_bank: library + 'DM_131.png', dots_answer: library + 'WM_131_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_132_dots.png', DM_bank: library + 'DM_132.png', dots_answer: library + 'WM_132_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_133_dots.png', DM_bank: library + 'DM_133.png', dots_answer: library + 'WM_133_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_134_dots.png', DM_bank: library + 'DM_134.png', dots_answer: library + 'WM_134_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_135_dots.png', DM_bank: library + 'DM_135.png', dots_answer: library + 'WM_135_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_136_dots.png', DM_bank: library + 'DM_136.png', dots_answer: library + 'WM_136_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_137_dots.png', DM_bank: library + 'DM_137.png', dots_answer: library + 'WM_137_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_138_dots.png', DM_bank: library + 'DM_138.png', dots_answer: library + 'WM_138_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_139_dots.png', DM_bank: library + 'DM_139.png', dots_answer: library + 'WM_139_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_140_dots.png', DM_bank: library + 'DM_140.png', dots_answer: library + 'WM_140_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_141_dots.png', DM_bank: library + 'DM_141.png', dots_answer: library + 'WM_141_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_142_dots.png', DM_bank: library + 'DM_142.png', dots_answer: library + 'WM_142_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_143_dots.png', DM_bank: library + 'DM_143.png', dots_answer: library + 'WM_143_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_144_dots.png', DM_bank: library + 'DM_144.png', dots_answer: library + 'WM_144_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_145_dots.png', DM_bank: library + 'DM_145.png', dots_answer: library + 'WM_145_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_146_dots.png', DM_bank: library + 'DM_146.png', dots_answer: library + 'WM_146_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_147_dots.png', DM_bank: library + 'DM_147.png', dots_answer: library + 'WM_147_answer.png', correct: '0', risk: '50', amount: '5', load: 'Yes'},
+            {dots: library + 'WM_148_dots.png', DM_bank: library + 'DM_148.png', dots_answer: library + 'WM_148_answer.png', correct: '0', risk: '25', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_149_dots.png', DM_bank: library + 'DM_149.png', dots_answer: library + 'WM_149_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_150_dots.png', DM_bank: library + 'DM_150.png', dots_answer: library + 'WM_150_answer.png', correct: '0', risk: '75', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_151_dots.png', DM_bank: library + 'DM_151.png', dots_answer: library + 'WM_151_answer.png', correct: '0', risk: '25', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_152_dots.png', DM_bank: library + 'DM_152.png', dots_answer: library + 'WM_152_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_153_dots.png', DM_bank: library + 'DM_153.png', dots_answer: library + 'WM_153_answer.png', correct: '0', risk: '75', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_154_dots.png', DM_bank: library + 'DM_154.png', dots_answer: library + 'WM_154_answer.png', correct: '0', risk: '25', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_155_dots.png', DM_bank: library + 'DM_155.png', dots_answer: library + 'WM_155_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_156_dots.png', DM_bank: library + 'DM_156.png', dots_answer: library + 'WM_156_answer.png', correct: '0', risk: '75', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_157_dots.png', DM_bank: library + 'DM_157.png', dots_answer: library + 'WM_157_answer.png', correct: '0', risk: '25', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_158_dots.png', DM_bank: library + 'DM_158.png', dots_answer: library + 'WM_158_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_159_dots.png', DM_bank: library + 'DM_159.png', dots_answer: library + 'WM_159_answer.png', correct: '0', risk: '75', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_160_dots.png', DM_bank: library + 'DM_160.png', dots_answer: library + 'WM_160_answer.png', correct: '0', risk: '25', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_161_dots.png', DM_bank: library + 'DM_161.png', dots_answer: library + 'WM_161_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_162_dots.png', DM_bank: library + 'DM_162.png', dots_answer: library + 'WM_162_answer.png', correct: '0', risk: '75', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_163_dots.png', DM_bank: library + 'DM_163.png', dots_answer: library + 'WM_163_answer.png', correct: '0', risk: '25', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_164_dots.png', DM_bank: library + 'DM_164.png', dots_answer: library + 'WM_164_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_165_dots.png', DM_bank: library + 'DM_165.png', dots_answer: library + 'WM_165_answer.png', correct: '0', risk: '75', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_166_dots.png', DM_bank: library + 'DM_166.png', dots_answer: library + 'WM_166_answer.png', correct: '0', risk: '25', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_167_dots.png', DM_bank: library + 'DM_167.png', dots_answer: library + 'WM_167_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_168_dots.png', DM_bank: library + 'DM_168.png', dots_answer: library + 'WM_168_answer.png', correct: '0', risk: '75', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_169_dots.png', DM_bank: library + 'DM_169.png', dots_answer: library + 'WM_169_answer.png', correct: '0', risk: '25', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_170_dots.png', DM_bank: library + 'DM_170.png', dots_answer: library + 'WM_170_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_171_dots.png', DM_bank: library + 'DM_171.png', dots_answer: library + 'WM_171_answer.png', correct: '0', risk: '75', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_172_dots.png', DM_bank: library + 'DM_172.png', dots_answer: library + 'WM_172_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_173_dots.png', DM_bank: library + 'DM_173.png', dots_answer: library + 'WM_173_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_174_dots.png', DM_bank: library + 'DM_174.png', dots_answer: library + 'WM_174_answer.png', correct: '0', risk: '50', amount: '8', load: 'Yes'},
+            {dots: library + 'WM_175_dots.png', DM_bank: library + 'DM_175.png', dots_answer: library + 'WM_175_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_176_dots.png', DM_bank: library + 'DM_176.png', dots_answer: library + 'WM_176_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_177_dots.png', DM_bank: library + 'DM_177.png', dots_answer: library + 'WM_177_answer.png', correct: '0', risk: '50', amount: '12', load: 'Yes'},
+            {dots: library + 'WM_178_dots.png', DM_bank: library + 'DM_178.png', dots_answer: library + 'WM_178_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_179_dots.png', DM_bank: library + 'DM_179.png', dots_answer: library + 'WM_179_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_180_dots.png', DM_bank: library + 'DM_180.png', dots_answer: library + 'WM_180_answer.png', correct: '0', risk: '50', amount: '14', load: 'Yes'},
+            {dots: library + 'WM_181_dots.png', DM_bank: library + 'DM_181.png', dots_answer: library + 'WM_181_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_182_dots.png', DM_bank: library + 'DM_182.png', dots_answer: library + 'WM_182_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_183_dots.png', DM_bank: library + 'DM_183.png', dots_answer: library + 'WM_183_answer.png', correct: '0', risk: '50', amount: '19', load: 'Yes'},
+            {dots: library + 'WM_184_dots.png', DM_bank: library + 'DM_184.png', dots_answer: library + 'WM_184_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_185_dots.png', DM_bank: library + 'DM_185.png', dots_answer: library + 'WM_185_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_186_dots.png', DM_bank: library + 'DM_186.png', dots_answer: library + 'WM_186_answer.png', correct: '0', risk: '50', amount: '27', load: 'Yes'},
+            {dots: library + 'WM_187_dots.png', DM_bank: library + 'DM_187.png', dots_answer: library + 'WM_187_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_188_dots.png', DM_bank: library + 'DM_188.png', dots_answer: library + 'WM_188_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_189_dots.png', DM_bank: library + 'DM_189.png', dots_answer: library + 'WM_189_answer.png', correct: '0', risk: '50', amount: '37', load: 'Yes'},
+            {dots: library + 'WM_190_dots.png', DM_bank: library + 'DM_190.png', dots_answer: library + 'WM_190_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_191_dots.png', DM_bank: library + 'DM_191.png', dots_answer: library + 'WM_191_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_192_dots.png', DM_bank: library + 'DM_192.png', dots_answer: library + 'WM_192_answer.png', correct: '0', risk: '50', amount: '52', load: 'Yes'},
+            {dots: library + 'WM_193_dots.png', DM_bank: library + 'DM_193.png', dots_answer: library + 'WM_193_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_194_dots.png', DM_bank: library + 'DM_194.png', dots_answer: library + 'WM_194_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_195_dots.png', DM_bank: library + 'DM_195.png', dots_answer: library + 'WM_195_answer.png', correct: '0', risk: '50', amount: '73', load: 'Yes'},
+            {dots: library + 'WM_196_dots.png', DM_bank: library + 'DM_196.png', dots_answer: library + 'WM_196_answer.png', correct: '1', risk: '50', amount: '5', load: 'No'},
+            {dots: library + 'WM_197_dots.png', DM_bank: library + 'DM_197.png', dots_answer: library + 'WM_197_answer.png', correct: '1', risk: '25', amount: '8', load: 'No'},
+            {dots: library + 'WM_198_dots.png', DM_bank: library + 'DM_198.png', dots_answer: library + 'WM_198_answer.png', correct: '1', risk: '50', amount: '8', load: 'No'},
+            {dots: library + 'WM_199_dots.png', DM_bank: library + 'DM_199.png', dots_answer: library + 'WM_199_answer.png', correct: '1', risk: '75', amount: '8', load: 'No'},
+            {dots: library + 'WM_200_dots.png', DM_bank: library + 'DM_200.png', dots_answer: library + 'WM_200_answer.png', correct: '1', risk: '25', amount: '12', load: 'No'},
+            {dots: library + 'WM_201_dots.png', DM_bank: library + 'DM_201.png', dots_answer: library + 'WM_201_answer.png', correct: '1', risk: '50', amount: '12', load: 'No'},
+            {dots: library + 'WM_202_dots.png', DM_bank: library + 'DM_202.png', dots_answer: library + 'WM_202_answer.png', correct: '1', risk: '75', amount: '12', load: 'No'},
+            {dots: library + 'WM_203_dots.png', DM_bank: library + 'DM_203.png', dots_answer: library + 'WM_203_answer.png', correct: '1', risk: '25', amount: '14', load: 'No'},
+            {dots: library + 'WM_204_dots.png', DM_bank: library + 'DM_204.png', dots_answer: library + 'WM_204_answer.png', correct: '1', risk: '50', amount: '14', load: 'No'},
+            {dots: library + 'WM_205_dots.png', DM_bank: library + 'DM_205.png', dots_answer: library + 'WM_205_answer.png', correct: '1', risk: '75', amount: '14', load: 'No'},
+            {dots: library + 'WM_206_dots.png', DM_bank: library + 'DM_206.png', dots_answer: library + 'WM_206_answer.png', correct: '1', risk: '25', amount: '19', load: 'No'},
+            {dots: library + 'WM_207_dots.png', DM_bank: library + 'DM_207.png', dots_answer: library + 'WM_207_answer.png', correct: '1', risk: '50', amount: '19', load: 'No'},
+            {dots: library + 'WM_208_dots.png', DM_bank: library + 'DM_208.png', dots_answer: library + 'WM_208_answer.png', correct: '1', risk: '75', amount: '19', load: 'No'},
+            {dots: library + 'WM_209_dots.png', DM_bank: library + 'DM_209.png', dots_answer: library + 'WM_209_answer.png', correct: '1', risk: '25', amount: '27', load: 'No'},
+            {dots: library + 'WM_210_dots.png', DM_bank: library + 'DM_210.png', dots_answer: library + 'WM_210_answer.png', correct: '1', risk: '50', amount: '27', load: 'No'},
+            {dots: library + 'WM_211_dots.png', DM_bank: library + 'DM_211.png', dots_answer: library + 'WM_211_answer.png', correct: '1', risk: '75', amount: '27', load: 'No'},
+            {dots: library + 'WM_212_dots.png', DM_bank: library + 'DM_212.png', dots_answer: library + 'WM_212_answer.png', correct: '1', risk: '25', amount: '37', load: 'No'},
+            {dots: library + 'WM_213_dots.png', DM_bank: library + 'DM_213.png', dots_answer: library + 'WM_213_answer.png', correct: '1', risk: '50', amount: '37', load: 'No'},
+            {dots: library + 'WM_214_dots.png', DM_bank: library + 'DM_214.png', dots_answer: library + 'WM_214_answer.png', correct: '1', risk: '75', amount: '37', load: 'No'},
+            {dots: library + 'WM_215_dots.png', DM_bank: library + 'DM_215.png', dots_answer: library + 'WM_215_answer.png', correct: '1', risk: '25', amount: '52', load: 'No'},
+            {dots: library + 'WM_216_dots.png', DM_bank: library + 'DM_216.png', dots_answer: library + 'WM_216_answer.png', correct: '1', risk: '50', amount: '52', load: 'No'},
+            {dots: library + 'WM_217_dots.png', DM_bank: library + 'DM_217.png', dots_answer: library + 'WM_217_answer.png', correct: '1', risk: '75', amount: '52', load: 'No'},
+            {dots: library + 'WM_218_dots.png', DM_bank: library + 'DM_218.png', dots_answer: library + 'WM_218_answer.png', correct: '1', risk: '25', amount: '73', load: 'No'},
+            {dots: library + 'WM_219_dots.png', DM_bank: library + 'DM_219.png', dots_answer: library + 'WM_219_answer.png', correct: '1', risk: '50', amount: '73', load: 'No'},
+            {dots: library + 'WM_220_dots.png', DM_bank: library + 'DM_220.png', dots_answer: library + 'WM_220_answer.png', correct: '1', risk: '75', amount: '73', load: 'No'},
+            {dots: library + 'WM_221_dots.png', DM_bank: library + 'DM_221.png', dots_answer: library + 'WM_221_answer.png', correct: '0', risk: '25', amount: '8', load: 'No'},
+            {dots: library + 'WM_222_dots.png', DM_bank: library + 'DM_222.png', dots_answer: library + 'WM_222_answer.png', correct: '0', risk: '50', amount: '8', load: 'No'},
+            {dots: library + 'WM_223_dots.png', DM_bank: library + 'DM_223.png', dots_answer: library + 'WM_223_answer.png', correct: '0', risk: '75', amount: '8', load: 'No'},
+            {dots: library + 'WM_224_dots.png', DM_bank: library + 'DM_224.png', dots_answer: library + 'WM_224_answer.png', correct: '0', risk: '25', amount: '12', load: 'No'},
+            {dots: library + 'WM_225_dots.png', DM_bank: library + 'DM_225.png', dots_answer: library + 'WM_225_answer.png', correct: '0', risk: '50', amount: '12', load: 'No'},
+            {dots: library + 'WM_226_dots.png', DM_bank: library + 'DM_226.png', dots_answer: library + 'WM_226_answer.png', correct: '0', risk: '75', amount: '12', load: 'No'},
+            {dots: library + 'WM_227_dots.png', DM_bank: library + 'DM_227.png', dots_answer: library + 'WM_227_answer.png', correct: '0', risk: '25', amount: '14', load: 'No'},
+            {dots: library + 'WM_228_dots.png', DM_bank: library + 'DM_228.png', dots_answer: library + 'WM_228_answer.png', correct: '0', risk: '50', amount: '14', load: 'No'},
+            {dots: library + 'WM_229_dots.png', DM_bank: library + 'DM_229.png', dots_answer: library + 'WM_229_answer.png', correct: '0', risk: '75', amount: '14', load: 'No'},
+            {dots: library + 'WM_230_dots.png', DM_bank: library + 'DM_230.png', dots_answer: library + 'WM_230_answer.png', correct: '0', risk: '25', amount: '19', load: 'No'},
+            {dots: library + 'WM_231_dots.png', DM_bank: library + 'DM_231.png', dots_answer: library + 'WM_231_answer.png', correct: '0', risk: '50', amount: '19', load: 'No'},
+            {dots: library + 'WM_232_dots.png', DM_bank: library + 'DM_232.png', dots_answer: library + 'WM_232_answer.png', correct: '0', risk: '75', amount: '19', load: 'No'},
+            {dots: library + 'WM_233_dots.png', DM_bank: library + 'DM_233.png', dots_answer: library + 'WM_233_answer.png', correct: '0', risk: '25', amount: '27', load: 'No'},
+            {dots: library + 'WM_234_dots.png', DM_bank: library + 'DM_234.png', dots_answer: library + 'WM_234_answer.png', correct: '0', risk: '50', amount: '27', load: 'No'},
+            {dots: library + 'WM_235_dots.png', DM_bank: library + 'DM_235.png', dots_answer: library + 'WM_235_answer.png', correct: '0', risk: '75', amount: '27', load: 'No'},
+            {dots: library + 'WM_236_dots.png', DM_bank: library + 'DM_236.png', dots_answer: library + 'WM_236_answer.png', correct: '0', risk: '25', amount: '37', load: 'No'},
+            {dots: library + 'WM_237_dots.png', DM_bank: library + 'DM_237.png', dots_answer: library + 'WM_237_answer.png', correct: '0', risk: '50', amount: '37', load: 'No'},
+            {dots: library + 'WM_238_dots.png', DM_bank: library + 'DM_238.png', dots_answer: library + 'WM_238_answer.png', correct: '0', risk: '75', amount: '37', load: 'No'},
+            {dots: library + 'WM_239_dots.png', DM_bank: library + 'DM_239.png', dots_answer: library + 'WM_239_answer.png', correct: '0', risk: '25', amount: '52', load: 'No'},
+            {dots: library + 'WM_240_dots.png', DM_bank: library + 'DM_240.png', dots_answer: library + 'WM_240_answer.png', correct: '0', risk: '50', amount: '52', load: 'No'},
+            {dots: library + 'WM_241_dots.png', DM_bank: library + 'DM_241.png', dots_answer: library + 'WM_241_answer.png', correct: '0', risk: '75', amount: '52', load: 'No'},
+            {dots: library + 'WM_242_dots.png', DM_bank: library + 'DM_242.png', dots_answer: library + 'WM_242_answer.png', correct: '0', risk: '25', amount: '73', load: 'No'},
+            {dots: library + 'WM_243_dots.png', DM_bank: library + 'DM_243.png', dots_answer: library + 'WM_243_answer.png', correct: '0', risk: '50', amount: '73', load: 'No'},
+            {dots: library + 'WM_244_dots.png', DM_bank: library + 'DM_244.png', dots_answer: library + 'WM_244_answer.png', correct: '0', risk: '75', amount: '73', load: 'No'},
+            {dots: library + 'WM_245_dots.png', DM_bank: library + 'DM_245.png', dots_answer: library + 'WM_245_answer.png', correct: '1', risk: '50', amount: '5', load: 'No'},
+            {dots: library + 'WM_246_dots.png', DM_bank: library + 'DM_246.png', dots_answer: library + 'WM_246_answer.png', correct: '1', risk: '25', amount: '8', load: 'No'},
+            {dots: library + 'WM_247_dots.png', DM_bank: library + 'DM_247.png', dots_answer: library + 'WM_247_answer.png', correct: '1', risk: '50', amount: '8', load: 'No'},
+            {dots: library + 'WM_248_dots.png', DM_bank: library + 'DM_248.png', dots_answer: library + 'WM_248_answer.png', correct: '1', risk: '75', amount: '8', load: 'No'},
+            {dots: library + 'WM_249_dots.png', DM_bank: library + 'DM_249.png', dots_answer: library + 'WM_249_answer.png', correct: '1', risk: '25', amount: '12', load: 'No'},
+            {dots: library + 'WM_250_dots.png', DM_bank: library + 'DM_250.png', dots_answer: library + 'WM_250_answer.png', correct: '1', risk: '50', amount: '12', load: 'No'},
+            {dots: library + 'WM_251_dots.png', DM_bank: library + 'DM_251.png', dots_answer: library + 'WM_251_answer.png', correct: '1', risk: '75', amount: '12', load: 'No'},
+            {dots: library + 'WM_252_dots.png', DM_bank: library + 'DM_252.png', dots_answer: library + 'WM_252_answer.png', correct: '1', risk: '25', amount: '14', load: 'No'},
+            {dots: library + 'WM_253_dots.png', DM_bank: library + 'DM_253.png', dots_answer: library + 'WM_253_answer.png', correct: '1', risk: '50', amount: '14', load: 'No'},
+            {dots: library + 'WM_254_dots.png', DM_bank: library + 'DM_254.png', dots_answer: library + 'WM_254_answer.png', correct: '1', risk: '75', amount: '14', load: 'No'},
+            {dots: library + 'WM_255_dots.png', DM_bank: library + 'DM_255.png', dots_answer: library + 'WM_255_answer.png', correct: '1', risk: '25', amount: '19', load: 'No'},
+            {dots: library + 'WM_256_dots.png', DM_bank: library + 'DM_256.png', dots_answer: library + 'WM_256_answer.png', correct: '1', risk: '50', amount: '19', load: 'No'},
+            {dots: library + 'WM_257_dots.png', DM_bank: library + 'DM_257.png', dots_answer: library + 'WM_257_answer.png', correct: '1', risk: '75', amount: '19', load: 'No'},
+            {dots: library + 'WM_258_dots.png', DM_bank: library + 'DM_258.png', dots_answer: library + 'WM_258_answer.png', correct: '1', risk: '25', amount: '27', load: 'No'},
+            {dots: library + 'WM_259_dots.png', DM_bank: library + 'DM_259.png', dots_answer: library + 'WM_259_answer.png', correct: '1', risk: '50', amount: '27', load: 'No'},
+            {dots: library + 'WM_260_dots.png', DM_bank: library + 'DM_260.png', dots_answer: library + 'WM_260_answer.png', correct: '1', risk: '75', amount: '27', load: 'No'},
+            {dots: library + 'WM_261_dots.png', DM_bank: library + 'DM_261.png', dots_answer: library + 'WM_261_answer.png', correct: '1', risk: '25', amount: '37', load: 'No'},
+            {dots: library + 'WM_262_dots.png', DM_bank: library + 'DM_262.png', dots_answer: library + 'WM_262_answer.png', correct: '1', risk: '50', amount: '37', load: 'No'},
+            {dots: library + 'WM_263_dots.png', DM_bank: library + 'DM_263.png', dots_answer: library + 'WM_263_answer.png', correct: '1', risk: '75', amount: '37', load: 'No'},
+            {dots: library + 'WM_264_dots.png', DM_bank: library + 'DM_264.png', dots_answer: library + 'WM_264_answer.png', correct: '1', risk: '25', amount: '52', load: 'No'},
+            {dots: library + 'WM_265_dots.png', DM_bank: library + 'DM_265.png', dots_answer: library + 'WM_265_answer.png', correct: '1', risk: '50', amount: '52', load: 'No'},
+            {dots: library + 'WM_266_dots.png', DM_bank: library + 'DM_266.png', dots_answer: library + 'WM_266_answer.png', correct: '1', risk: '75', amount: '52', load: 'No'},
+            {dots: library + 'WM_267_dots.png', DM_bank: library + 'DM_267.png', dots_answer: library + 'WM_267_answer.png', correct: '1', risk: '25', amount: '73', load: 'No'},
+            {dots: library + 'WM_268_dots.png', DM_bank: library + 'DM_268.png', dots_answer: library + 'WM_268_answer.png', correct: '1', risk: '50', amount: '73', load: 'No'},
+            {dots: library + 'WM_269_dots.png', DM_bank: library + 'DM_269.png', dots_answer: library + 'WM_269_answer.png', correct: '1', risk: '75', amount: '73', load: 'No'},
+            {dots: library + 'WM_270_dots.png', DM_bank: library + 'DM_270.png', dots_answer: library + 'WM_270_answer.png', correct: '0', risk: '25', amount: '8', load: 'No'},
+            {dots: library + 'WM_271_dots.png', DM_bank: library + 'DM_271.png', dots_answer: library + 'WM_271_answer.png', correct: '0', risk: '50', amount: '8', load: 'No'},
+            {dots: library + 'WM_272_dots.png', DM_bank: library + 'DM_272.png', dots_answer: library + 'WM_272_answer.png', correct: '0', risk: '75', amount: '8', load: 'No'},
+            {dots: library + 'WM_273_dots.png', DM_bank: library + 'DM_273.png', dots_answer: library + 'WM_273_answer.png', correct: '0', risk: '25', amount: '12', load: 'No'},
+            {dots: library + 'WM_274_dots.png', DM_bank: library + 'DM_274.png', dots_answer: library + 'WM_274_answer.png', correct: '0', risk: '50', amount: '12', load: 'No'},
+            {dots: library + 'WM_275_dots.png', DM_bank: library + 'DM_275.png', dots_answer: library + 'WM_275_answer.png', correct: '0', risk: '75', amount: '12', load: 'No'},
+            {dots: library + 'WM_276_dots.png', DM_bank: library + 'DM_276.png', dots_answer: library + 'WM_276_answer.png', correct: '0', risk: '25', amount: '14', load: 'No'},
+            {dots: library + 'WM_277_dots.png', DM_bank: library + 'DM_277.png', dots_answer: library + 'WM_277_answer.png', correct: '0', risk: '50', amount: '14', load: 'No'},
+            {dots: library + 'WM_278_dots.png', DM_bank: library + 'DM_278.png', dots_answer: library + 'WM_278_answer.png', correct: '0', risk: '75', amount: '14', load: 'No'},
+            {dots: library + 'WM_279_dots.png', DM_bank: library + 'DM_279.png', dots_answer: library + 'WM_279_answer.png', correct: '0', risk: '25', amount: '19', load: 'No'},
+            {dots: library + 'WM_280_dots.png', DM_bank: library + 'DM_280.png', dots_answer: library + 'WM_280_answer.png', correct: '0', risk: '50', amount: '19', load: 'No'},
+            {dots: library + 'WM_281_dots.png', DM_bank: library + 'DM_281.png', dots_answer: library + 'WM_281_answer.png', correct: '0', risk: '75', amount: '19', load: 'No'},
+            {dots: library + 'WM_282_dots.png', DM_bank: library + 'DM_282.png', dots_answer: library + 'WM_282_answer.png', correct: '0', risk: '25', amount: '27', load: 'No'},
+            {dots: library + 'WM_283_dots.png', DM_bank: library + 'DM_283.png', dots_answer: library + 'WM_283_answer.png', correct: '0', risk: '50', amount: '27', load: 'No'},
+            {dots: library + 'WM_284_dots.png', DM_bank: library + 'DM_284.png', dots_answer: library + 'WM_284_answer.png', correct: '0', risk: '75', amount: '27', load: 'No'},
+            {dots: library + 'WM_285_dots.png', DM_bank: library + 'DM_285.png', dots_answer: library + 'WM_285_answer.png', correct: '0', risk: '25', amount: '37', load: 'No'},
+            {dots: library + 'WM_286_dots.png', DM_bank: library + 'DM_286.png', dots_answer: library + 'WM_286_answer.png', correct: '0', risk: '50', amount: '37', load: 'No'},
+            {dots: library + 'WM_287_dots.png', DM_bank: library + 'DM_287.png', dots_answer: library + 'WM_287_answer.png', correct: '0', risk: '75', amount: '37', load: 'No'},
+            {dots: library + 'WM_288_dots.png', DM_bank: library + 'DM_288.png', dots_answer: library + 'WM_288_answer.png', correct: '0', risk: '25', amount: '52', load: 'No'},
+            {dots: library + 'WM_289_dots.png', DM_bank: library + 'DM_289.png', dots_answer: library + 'WM_289_answer.png', correct: '0', risk: '50', amount: '52', load: 'No'},
+            {dots: library + 'WM_290_dots.png', DM_bank: library + 'DM_290.png', dots_answer: library + 'WM_290_answer.png', correct: '0', risk: '75', amount: '52', load: 'No'},
+            {dots: library + 'WM_291_dots.png', DM_bank: library + 'DM_291.png', dots_answer: library + 'WM_291_answer.png', correct: '0', risk: '25', amount: '73', load: 'No'},
+            {dots: library + 'WM_292_dots.png', DM_bank: library + 'DM_292.png', dots_answer: library + 'WM_292_answer.png', correct: '0', risk: '50', amount: '73', load: 'No'},
+            {dots: library + 'WM_293_dots.png', DM_bank: library + 'DM_293.png', dots_answer: library + 'WM_293_answer.png', correct: '0', risk: '75', amount: '73', load: 'No'},
+        ]
+
+        /* Create procedures */
+
+        var instructions = {
+            timeline: [{
+                type: 'image-keyboard-response',
+                stimulus: jsPsych.timelineVariable('inst'),
+                data: {},
+                on_finish: function(data){
+                    if (data.key_press == '89'){
+                        repeat = 1
+                    } else {
+                        repeat = 0
+                    }
+                }
+            }],
+            timeline_variables: instimages,
+            randomize_order: false
+        };
+
+        var inst_loop = {
+            timeline: [instructions],
+            loop_function: function(data){
+                if(repeat == 1){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        var fixation = {
+            type: 'html-keyboard-response',
+            stimulus: '<div style="font-size:60px; position: absolute;  top: 400px;  left: 50%;">+</div>',
+            choices: jsPsych.NO_KEYS,
+            trial_duration: 1000,
+        };
+
+        var mask = {
+            type: 'image-keyboard-response',
+            choices: jsPsych.NO_KEYS,
+            trial_duration: 2000,
+            stimulus: base_path + 'mask.png',
+        };
+
+        var rest = {
+            type: 'html-keyboard-response',
+            stimulus: '<p class="stimulus">This is a resting slide. Press any key to continue</p>',
+            choices: jsPsych.ALL_KEYS,
+            trial_duration: function(){
+                if (trialN % 60 == 0){
+                    return undefined
+                }
+                else {
+                    return 0
+                }
+            }
+        }
+
+        var prac_procedure = {
+            timeline: [
+                fixation,
+                { // Dot array
+                    type: 'image-keyboard-response',
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: 2000,
+                    stimulus: jsPsych.timelineVariable('dots')
+                },
+                mask,
+                { // WM response WM False
+                    type: 'image-keyboard-response',
+                    choices: ['uparrow', 'downarrow'],
+                    stimulus: jsPsych.timelineVariable('dots_answer'),
+                    trial_duration: function(){
+                        if (jsPsych.timelineVariable('load', true) == 'No'){return undefined}
+                        else { return 0}
+                    },
+                    data: {},
+                    on_finish: function(data){
+                        if (data.key_press == '38'){
+                            if (jsPsych.timelineVariable('correct', true) == 1){wm_acc = 1}
+                            else {wm_acc = 0}
+                        } 
+                        if (data.key_press == '40') {
+                            if (jsPsych.timelineVariable('correct', true) == 0){wm_acc = 1}
+                            else{wm_acc = 0}
+                        }
+                    }
+                },
+                { // DM
+                    type: 'image-keyboard-response',
+                    choices: ['leftarrow', 'rightarrow'],
+                    stimulus: jsPsych.timelineVariable('DM_bank'),
+                    data: {},
+                    on_finish: function(data){
+                        trialN = trialN + 1;
+                        if (data.key_press == '37'){
+                            trail_points = 5
+                        }
+                        else {
+                            var luck = Math.floor(Math.random() * 100) + 1;
+                            data.luck = luck;
+                            if (luck < jsPsych.timelineVariable('risk', true)){
+                                trail_points = parseInt(jsPsych.timelineVariable('amount', true))
+                            }
+                            else {
+                                trail_points = 0
+                            }
+                        }
+                    }
+                },
+                { // WM response WM True
+                    type: 'image-keyboard-response',
+                    choices: ['uparrow', 'downarrow'],
+                    stimulus: jsPsych.timelineVariable('dots_answer'),
+                    trial_duration: function(){
+                        if (jsPsych.timelineVariable('load', true) == 'Yes'){return undefined}
+                        else { return 0}
+                    },
+                    data: {},
+                    on_finish: function(data){
+                        if (data.key_press == '38'){
+                            if (jsPsych.timelineVariable('correct', true) == 1){wm_acc = 1}
+                            else {wm_acc = 0}
+                        } 
+                        if (data.key_press == '40') {
+                            if (jsPsych.timelineVariable('correct', true) == 0){wm_acc = 1}
+                            else{wm_acc = 0}
+                        }
+                    }
+                },
+                { // Feedback
+                    type: 'html-keyboard-response',
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: 2000,
+                    stimulus: function(){
+                        if (wm_acc == 1) {
+                            return ('<div style="font-size:60px; position: absolute;  top: 400px; left: 40%;"<p>Correct!</p> <p>you recieved: ' + trail_points + '</p></div>')
+                        } else {
+                            return ('<div style="font-size:60px; position: absolute;  top: 400px; left: 40%;"><p>Incorrect</p> <p>Better luck next time</p></div>')
+                        }
+                    },
+                }
+            ],
+            timeline_variables: prac_list,
+            randomize_order: true
+        }
+
+        var prac_end = {
+            type: 'image-keyboard-response',
+            stimulus: base_path + 'inst/WMDM_pracEnd.png',
+            data: {},
+            on_finish: function(data){
+                if (data.key_press == '89'){
+                    repeat = 1
+                } else {
+                    repeat = 0
+                }
+            }
+        };
+
+        var prac_loop = {
+            timeline: [prac_procedure, prac_end],
+            loop_function: function(data){
+                if(repeat == 1){
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        }
+
+        var trials_procedure = {
+            timeline: [
+                fixation,
+                { // dots array
+                    type: 'image-keyboard-response',
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: 2000,
+                    stimulus: jsPsych.timelineVariable('dots')
+                },
+                mask,
+                { // WM response WM False
+                    type: 'image-keyboard-response',
+                    choices: ['uparrow', 'downarrow'],
+                    stimulus: jsPsych.timelineVariable('dots_answer'),
+                    trial_duration: function(){
+                        if (jsPsych.timelineVariable('load', true) == 'No'){return undefined}
+                        else { return 0}
+                    },
+                    data: {},
+                    on_finish: function(data){
+                        if (data.key_press == '38'){
+                            if (jsPsych.timelineVariable('correct', true) == 1){wm_acc = 1}
+                            else {wm_acc = 0}
+                        } 
+                        if (data.key_press == '40'){
+                            if (jsPsych.timelineVariable('correct', true) == 0){wm_acc = 1}
+                            else{wm_acc = 0}
+                        }
+                    }
+                },
+                { // DM
+                    type: 'image-keyboard-response',
+                    choices: ['leftarrow', 'rightarrow'],
+                    stimulus: jsPsych.timelineVariable('DM_bank'),
+                    data: {},
+                    on_finish: function(data){
+                        trialN = trialN + 1;
+                        if (data.key_press == '37'){
+                            trail_points = 5
+                        }
+                        else {
+                            var luck = Math.floor(Math.random() * 100) + 1;
+                            data.luck = luck;
+                            if (luck < jsPsych.timelineVariable('risk', true)){
+                                trail_points = parseInt(jsPsych.timelineVariable('amount', true))
+                            }
+                            else {
+                                trail_points = 0
+                            }
+                        }
+                    }
+                },
+                { // WM response WM True
+                    type: 'image-keyboard-response',
+                    choices: ['uparrow', 'downarrow'],
+                    stimulus: jsPsych.timelineVariable('dots_answer'),
+                    trial_duration: function(){
+                        if (jsPsych.timelineVariable('load', true) == 'Yes'){return undefined}
+                        else { return 0}
+                    },
+                    data: {},
+                    on_finish: function(data){
+                        if (data.key_press == '38'){
+                            if (jsPsych.timelineVariable('correct', true) == 1){wm_acc = 1}
+                            else {wm_acc = 0}
+                        } 
+                        if (data.key_press == '40') {
+                            if (jsPsych.timelineVariable('correct', true) == 0){wm_acc = 1}
+                            else{wm_acc = 0}
+                        }
+                    }
+                },
+                { // Calc points
+                    type: 'html-keyboard-response',
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: 0,
+                    stimulus:'',
+                    on_finish: function(data){
+                        if (wm_acc == 1){
+                                points = points + trail_points
+                            }
+                        trialN = trialN + 1;
+                        data.wm_acc = wm_acc
+                        data.points = points;
+                        $('#scoreNum').text(points.toString());
+                    }
+                },
+                { // Feedback
+                    type: 'html-keyboard-response',
+                    choices: jsPsych.NO_KEYS,
+                    trial_duration: 2000,
+                    stimulus: function(){
+                        if (wm_acc == 1) {
+                            return ('<div style="font-size:60px; position: absolute;  top: 400px; left: 40%;"<p>Correct!</p> <p>you recieved: ' + trail_points + '</p></div>')
+                        } else {
+                            return ('<div style="font-size:60px; position: absolute;  top: 400px; left: 40%;"><p>Incorrect</p></div>')
+                        }
+                    },
+                },
+                rest
+            ],
+            timeline_variables: trial_list,
+            randomize_order: true
+        }
+
+        var age = {
+		    type: 'survey-text',
+		    questions: [
+                {prompt: "How old are you?", rows: 1, columns: 10},
+                {prompt: "What so you think this experiment tested?", rows: 5, columns:100},
+                {prompt: "On a scale of 1 to 10, with 1 the lowest and 10 the highest, how much did you enjoy the experiment?", rows: 1, columns: 10}
+            ],
+	    }
+
+        var demographic = {
+            type: 'survey-multi-choice',
+            questions:[
+                {prompt: 'Are you?', name: 'gender', options: ['Male', 'Female', 'Other/prefer not to answer'], required: true},
+                {prompt: 'Please specify the highest level of education you completed.', name: 'education', options: edu_s, required: true},
+                {prompt: 'What is your annual household income?', name: 'income', options: income_s, required: true},
+                {prompt: 'Are you Hispanic or Latino?', name: 'ethnicity', options: ['Yse', 'No', 'prefer not to answer'], required: true},
+                {prompt: 'What is your race', name: 'race', options: race_s, required: true},
+            ]
+        };
+
+        var goodbye = {
+            type: 'html-keyboard-response',
+            stimulus: function(){
+                var message = 
+                '<p class="stimulus">Thank you for your participation</p>' +
+                '<p class="stimulus">You have won' + points + ' points!!!</p>' +
+                '<p class="stimulus">Thanks for your participation!\n\n</p>' +
+                '<p class="stimulus">Press any key to complete the experiment</p>';
+
+                return message;
+            },
+            choices: jsPsych.ALL_KEYS 
+
+        }
+        
+        var stract = [];
+        
+        /* exp start */
+
+        /* define experiment structure */
+        stract.push(inst_loop);
+        
+        stract.push(cursor_off, prac_loop);
+
+        stract.push(trials_procedure);        
+
+        stract.push(cursor_on, age, demographic);
+
+        stract.push(goodbye);
+
+        /* start the experiment */
+
+        jsPsych.init({
+            preload_images: images,
+            timeline: stract,
+            display_element: 'jspsych-target',
+            experiment_structure: stract,
+            on_finish: function() {
+                psiturk.saveData({
+                    success: function() { psiturk.completeHIT(); }
+               });
+            },
+            on_data_update: function(data) {
+                psiturk.recordTrialData(data);
+            }
+        });
+
+    </script>
+
+</html>
